@@ -229,6 +229,11 @@ namespace TubeCast.Controllers
 			List<string> FilesToDelete = FilesInDirectory.Except(AllPodcasts).ToList();
 			foreach (string file in FilesToDelete)
 				System.IO.File.Delete(file);
+
+			List<string> YTIds = FilesToDelete.Select(x => Path.GetFileNameWithoutExtension(x)).ToList();
+			IEnumerable<Seen> ItemsToDelete = await _provider.GetSeenFromListOfIDs(YTIds);
+			_provider.DeleteSeen(ItemsToDelete);
+			
 			libmiroppb.Log($"Deleted old podcasts: {string.Join(',', FilesToDelete)}");
 			Console.WriteLine($"Deleted old podcasts: {string.Join(',', FilesToDelete)}");
 

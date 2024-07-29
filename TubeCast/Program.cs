@@ -22,6 +22,14 @@ System.Timers.Timer updateTimer = new() { Interval = TimeSpan.FromDays(1).TotalM
 updateTimer.Elapsed += UpdateTimer_Elapsed;
 updateTimer.Start();
 
+#if DEBUG
+	HttpClient client = new()
+	{
+		BaseAddress = new("http://localhost:1119/")
+	};
+	var response = client.GetAsync("tubecast/removeunused");
+#endif
+
 static void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
 {
 	HttpClient client = new()

@@ -12,6 +12,7 @@ namespace TubeCast.Data
 		public Task<IEnumerable<Seen>> GetSeen();
 		public Task<IEnumerable<Seen>> GetSeenFromListOfIDs(IEnumerable<string> ids);
 		void InsertNewSeen(List<Seen> newItems);
+		void DeleteSeen(IEnumerable<Seen> deleteItems);
 	}
 
 	public class DataProvider : IDataProvider
@@ -51,6 +52,16 @@ namespace TubeCast.Data
 
 			using MySqlConnection conn = _context.CreateConnection();
 			await conn.InsertAsync(newItems);
+			return;
+		}
+
+		public async void DeleteSeen(IEnumerable<Seen> deleteItems)
+		{
+			if (deleteItems == null || deleteItems.Count() == 0)
+				return;
+
+			using MySqlConnection conn = _context.CreateConnection();
+			await conn.DeleteAsync(deleteItems);
 			return;
 		}
 	}
