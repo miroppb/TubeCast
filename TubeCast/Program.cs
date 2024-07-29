@@ -22,7 +22,7 @@ System.Timers.Timer updateTimer = new() { Interval = TimeSpan.FromDays(1).TotalM
 updateTimer.Elapsed += UpdateTimer_Elapsed;
 updateTimer.Start();
 
-void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
+static void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
 {
 	HttpClient client = new()
 	{

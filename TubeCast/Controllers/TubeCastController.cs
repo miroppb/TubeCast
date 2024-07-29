@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using RestSharp;
 using RssGenerator;
 using System.Diagnostics;
+using System.Xml.Linq;
 using System.Xml.Serialization;
 using TubeCast.Dapper;
 using TubeCast.Data;
@@ -157,6 +158,28 @@ namespace TubeCast.Controllers
 			return Search;
 		}
 
+		[HttpGet("download/{file}")]
+		public async Task<ActionResult> Download(string file)
+		{
+			//get settings
+			Settings settings = await _provider.GetSettings();
+
+			var bytes = Array.Empty<byte>();
+
+			using (var fs = new FileStream(Path.Combine(settings.Path, file), FileMode.Open, FileAccess.Read))
+			{
+				var br = new BinaryReader(fs);
+				long numBytes = new FileInfo(Path.Combine(settings.Path, file)).Length;
+				bytes = br.ReadBytes((int)numBytes);
+			}
+
+			string? userIpAddress = HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString();
+			Console.WriteLine($"{userIpAddress} Requested File: {file}");
+			libmiroppb.Log($"{userIpAddress} Requested File: {file}");
+
+			return File(bytes, "audio/mpeg");
+		}
+
 		[HttpGet("update")]
 		public async Task<ActionResult<string>> Update()
 		{
@@ -176,6 +199,38 @@ namespace TubeCast.Controllers
 				_ = UpdatePodcast(channel, string.Empty, 5, settings);
 			}
 			libmiroppb.Log("Refreshed channels");
+
+			return Ok();
+		}
+
+		[HttpGet("removeunused")]
+		public async Task<ActionResult<string>> RemoveUnused()
+		{
+			//get settings
+			Settings settings = await _provider.GetSettings();
+
+			//lets read all rss files, and find current podcasts
+			List<string> files = [.. Directory.GetFiles(settings.Path, "*.rss")];
+			
+			List<string> AllPodcasts = [];
+
+			foreach (string file in files)
+			{
+				XElement rss = XElement.Load(file);
+				IEnumerable<IEnumerable<string>> links = rss.Descendants("item").Select(x => x.Descendants("enclosure").Select(x => (string)x.Attribute("url")!));
+				List<string> ActualLinks = links.SelectMany(innerEnumerable => innerEnumerable).ToList();
+                for (int i = 0; i < ActualLinks.Count; i++)
+					ActualLinks[i] = ActualLinks[i].Replace(settings.Domain + "/", settings.Path + "\\");
+				AllPodcasts.AddRange(ActualLinks);
+            }
+			List<string> FilesInDirectory = [.. Directory.GetFiles(settings.Path, "*.mp3")];
+
+			//find files that are in the directory but not in Podcasts
+			List<string> FilesToDelete = FilesInDirectory.Except(AllPodcasts).ToList();
+			foreach (string file in FilesToDelete)
+				System.IO.File.Delete(file);
+			libmiroppb.Log($"Deleted old podcasts: {string.Join(',', FilesToDelete)}");
+			Console.WriteLine($"Deleted old podcasts: {string.Join(',', FilesToDelete)}");
 
 			return Ok();
 		}
