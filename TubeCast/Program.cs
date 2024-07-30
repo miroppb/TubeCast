@@ -1,4 +1,3 @@
-using System.Timers;
 using TubeCast.Context;
 using TubeCast.Data;
 
@@ -17,26 +16,5 @@ var app = builder.Build();
 app.UseAuthorization();
 
 app.MapControllers();
-
-System.Timers.Timer updateTimer = new() { Interval = TimeSpan.FromDays(1).TotalMilliseconds };
-updateTimer.Elapsed += UpdateTimer_Elapsed;
-updateTimer.Start();
-
-#if DEBUG
-	HttpClient client = new()
-	{
-		BaseAddress = new("http://localhost:1119/")
-	};
-	var response = client.GetAsync("tubecast/removeunused");
-#endif
-
-static void UpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
-{
-	HttpClient client = new()
-	{
-		BaseAddress = new("http://localhost:1119/")
-	};
-	var response = client.GetAsync("tubecast/update");
-}
 
 app.Run("http://*:1119");
